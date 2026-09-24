@@ -210,6 +210,12 @@ export const EnvSchema = z
     STELLAR_RPC_TIMEOUT: integerEnv('STELLAR_RPC_TIMEOUT', 1).default(10000),
     STELLAR_RPC_MAX_RETRIES: integerEnv('STELLAR_RPC_MAX_RETRIES', 0).default(3),
     STELLAR_RPC_RETRY_DELAY: integerEnv('STELLAR_RPC_RETRY_DELAY', 0).default(1000),
+    /**
+     * Per-operation timeout overrides for Stellar RPC calls.
+     * Format: JSON object mapping operation names to timeouts in ms.
+     * Example: '{"getLatestLedger":2000,"accountExists":8000}'
+     */
+    STELLAR_RPC_OPERATION_DEADLINES: z.string().optional(),
 
     JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
     JWT_SECRET_PREVIOUS: z.preprocess(
@@ -236,6 +242,10 @@ export const EnvSchema = z
       (value) => (value === '' ? undefined : value),
       z.string().min(32, 'API_KEY_PEPPER must be at least 32 characters').optional()
     ),
+    API_KEY_PEPPER_PREVIOUS: z.preprocess(
+      (value) => (value === '' ? undefined : value),
+      z.string().min(32, 'API_KEY_PEPPER_PREVIOUS must be at least 32 characters').optional()
+    ),
     INDEXER_WORKER_TOKEN: z.string().min(32, 'INDEXER_WORKER_TOKEN must be at least 32 characters'),
     ADMIN_API_KEY: optionalString('ADMIN_API_KEY'),
 
@@ -256,6 +266,10 @@ export const EnvSchema = z
       .default(1024 * 1024),
     MAX_JSON_DEPTH: integerEnv('MAX_JSON_DEPTH', 1, 1000).default(20),
     REQUEST_TIMEOUT_MS: integerEnv('REQUEST_TIMEOUT_MS', 1000, 300000).default(30000),
+    GRAPHQL_PERSISTED_QUERY_ALLOWLIST: optionalString('GRAPHQL_PERSISTED_QUERY_ALLOWLIST'),
+    GRAPHQL_PERSISTED_QUERY_HASH_VERIFICATION: booleanEnv().default(true),
+    GRAPHQL_UNPERSISTED_QUERY_POLICY: z.enum(['allow', 'reject']).default('allow'),
+    GRAPHQL_INTROSPECTION_ENABLED: booleanEnv().default(true),
 
     LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
     METRICS_ENABLED: booleanEnv().default(true),
@@ -316,6 +330,9 @@ export const EnvSchema = z
     REQUIRE_ADMIN_AUTH: booleanEnv().default(false),
     ADMIN_API_TOKEN: optionalString('ADMIN_API_TOKEN'),
     WS_AUTH_REQUIRED: booleanEnv().default(false),
+    WS_ALLOWED_ORIGINS: optionalString('WS_ALLOWED_ORIGINS'),
+    WS_RECONNECT_LIMIT: integerEnv('WS_RECONNECT_LIMIT', 1, 100_000).default(20),
+    WS_RECONNECT_WINDOW_MS: integerEnv('WS_RECONNECT_WINDOW_MS', 1, 86_400_000).default(60_000),
     SSE_MAX_CONNECTIONS_PER_IP: integerEnv('SSE_MAX_CONNECTIONS_PER_IP', 1, 100_000).default(10),
     SSE_MAX_CONNECTIONS_PER_API_KEY: integerEnv(
       'SSE_MAX_CONNECTIONS_PER_API_KEY',
@@ -557,6 +574,7 @@ export interface Config {
   apiKeys: string[];
   /** Server-side pepper for API-key hashing. Never logged. */
   apiKeyPepper?: string | undefined;
+  apiKeyPepperPrevious?: string | undefined;
   indexerWorkerToken: string;
 
   /** OIDC issuer base URL. Undefined means OIDC login is disabled. */
@@ -567,6 +585,10 @@ export interface Config {
   maxRequestSizeBytes: number;
   maxJsonDepth: number;
   requestTimeoutMs: number;
+  graphqlPersistedQueryAllowlist: string[];
+  graphqlPersistedQueryHashVerification: boolean;
+  graphqlUnpersistedQueryPolicy: 'allow' | 'reject';
+  graphqlIntrospectionEnabled: boolean;
 
   logLevel: LogLevel;
   metricsEnabled: boolean;
@@ -778,6 +800,7 @@ function toConfig(env: ParsedEnv): Config {
       .map((key) => key.trim())
       .filter((key) => key.length > 0),
     apiKeyPepper: env.API_KEY_PEPPER,
+    apiKeyPepperPrevious: env.API_KEY_PEPPER_PREVIOUS,
     indexerWorkerToken: env.INDEXER_WORKER_TOKEN,
 
     oidcIssuerUrl: env.OIDC_ISSUER_URL,
@@ -786,6 +809,14 @@ function toConfig(env: ParsedEnv): Config {
     maxRequestSizeBytes: env.MAX_REQUEST_SIZE,
     maxJsonDepth: env.MAX_JSON_DEPTH,
     requestTimeoutMs: env.REQUEST_TIMEOUT_MS,
+    graphqlPersistedQueryAllowlist: env.GRAPHQL_PERSISTED_QUERY_ALLOWLIST
+      ? env.GRAPHQL_PERSISTED_QUERY_ALLOWLIST.split(',')
+          .map((hash) => hash.trim())
+          .filter((hash) => hash.length > 0)
+      : [],
+    graphqlPersistedQueryHashVerification: env.GRAPHQL_PERSISTED_QUERY_HASH_VERIFICATION,
+    graphqlUnpersistedQueryPolicy: env.GRAPHQL_UNPERSISTED_QUERY_POLICY,
+    graphqlIntrospectionEnabled: env.GRAPHQL_INTROSPECTION_ENABLED,
 
     logLevel: env.LOG_LEVEL,
     metricsEnabled: env.METRICS_ENABLED,

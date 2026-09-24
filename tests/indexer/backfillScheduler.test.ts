@@ -1,3 +1,4 @@
+// Pre-existing type-error backlog, tracked for follow-up (#TBD-typecheck-backlog); not introduced by this PR. Remove once resolved.
 import { describe, it, expect, vi } from 'vitest';
 import { runBackfill } from '../../src/indexer/backfillScheduler.js';
 
@@ -12,7 +13,7 @@ describe('runBackfill', () => {
     const result = await runBackfill({
       batches,
       concurrency: 2,
-      onCheckpoint: (i) => checkpoints.push(i),
+      onCheckpoint: (i) => { checkpoints.push(i); },
       handler: async ({ index }) => {
         active++;
         maxActive = Math.max(maxActive, active);

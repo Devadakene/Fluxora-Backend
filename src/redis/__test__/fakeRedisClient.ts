@@ -77,6 +77,19 @@ export class FakeRedisClient implements RedisClient {
         this.pendingThrows.clear();
     }
 
+    /**
+     * Test helper: return the most recently set PEXPIRE (ms) for a key, or
+     * undefined when the key has no recorded TTL.
+     */
+    getTtl(key: string): number | undefined {
+        return this.ttls.get(key);
+    }
+
+    /** Test helper: list every sorted-set key currently stored. */
+    getSortedSetKeys(): string[] {
+        return Array.from(this.sortedSets.keys());
+    }
+
     // -----------------------------------------------------------------------
     // Internal helpers
     // -----------------------------------------------------------------------
@@ -165,6 +178,14 @@ export class FakeRedisClient implements RedisClient {
         if (this.strings.has(key)) return false;
         this.strings.set(key, value);
         return true;
+    }
+
+    async incr(key: string): Promise<number> {
+        this.maybeThrow('incr');
+        const current = Number(this.strings.get(key) ?? '0');
+        const next = current + 1;
+        this.strings.set(key, String(next));
+        return next;
     }
 
     async del(key: string): Promise<void> {

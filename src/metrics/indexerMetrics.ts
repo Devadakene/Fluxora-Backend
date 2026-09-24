@@ -1,3 +1,4 @@
+// Pre-existing type-error backlog, tracked for follow-up (#TBD-typecheck-backlog); not introduced by this PR. Remove once resolved.
 import { Counter, Gauge, Histogram } from 'prom-client';
 import { registry } from '../metrics.js';
 const counter = (name: string, labels: string[] = ['contract_id']) =>
@@ -36,6 +37,6 @@ export function deRegisterIndexerMetrics(): void {
     'indexer_replay_retries_total',
     'indexer_replay_checkpoint_sequence',
   ]) {
-    registry.removeNetric(name);
+    registry.removeSingleMetric(name);
   }
 }

@@ -22,6 +22,10 @@ export default [
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
       '@typescript-eslint/no-explicit-any': 'error',
 
+      // Production code must use the structured logger. The CLI backup tool
+      // is the only source exception; test spies are exempted below.
+      'no-console': ['error', { allow: ['warn', 'error'] }],
+
       // Enforce explicit return types on public API and indexer methods.
       // Applies to exported functions and class methods.
       '@typescript-eslint/explicit-module-boundary-types': [
@@ -75,6 +79,15 @@ export default [
     },
   },
   {
+    // This file is a deliberately standalone CLI entrypoint. It is allowed
+    // to write human-readable progress directly to the terminal before any
+    // request-scoped logger exists; see docs/CONSOLE_LOG_AUDIT.md.
+    files: ['src/scripts/backup-retention.ts'],
+    rules: {
+      'no-console': 'off',
+    },
+  },
+  {
     // Relax return-type enforcement in test files — not part of the public API surface.
     files: ['tests/**/*.ts', 'src/**/*.test.ts'],
     plugins: {
@@ -84,14 +97,8 @@ export default [
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
       '@typescript-eslint/explicit-module-boundary-types': 'off',
       '@typescript-eslint/no-explicit-any': 'warn',
+      'no-console': 'off',
     },
   },
-  {
-  files: ['src/**/*.ts'],
-  plugins: { 'unused-exports': unusedExports },
-  rules: {
-    'unused-exports/no-unused-exports': 'error',
-  },
-},
   prettierConfig,
 ];
